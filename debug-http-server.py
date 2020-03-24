@@ -1,3 +1,6 @@
+# debugging HTTP server - purely meant to print out received encoded+decoded b64 data
+# does nothing else otherwise
+
 import http.server
 import logging
 import sys

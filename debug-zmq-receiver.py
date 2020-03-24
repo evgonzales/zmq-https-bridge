@@ -1,3 +1,5 @@
+# debugging zmq receiving application - does nothing but receive and print
+# the "World" in "Hello, World"
 import zmq
 import time
 import sys
