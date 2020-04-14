@@ -1,6 +1,7 @@
 import zmq
 import hashlib
 import sys
+import time
 
 def main():
     if len(sys.argv) != 2:
@@ -16,10 +17,10 @@ def main():
     while True:
         msg = socket.recv()
         hash = hashlib.sha256(msg).hexdigest()
-        print("[!] Received new message: \"%s\"" % msg)
+        print("[!] Received new message: \"%s\"" % msg.decode())
         
         socket.send(hash.encode())
-        print("[.] Sent message: \"%s\"" % msg)
+        print("[.] Sent message: \"%s\"" % hash)
         
         # wait so we don't flood
         time.sleep(5)

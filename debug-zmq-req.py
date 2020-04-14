@@ -26,13 +26,13 @@ def main():
         socket.send(msg.encode())
         print("[!] Sent new message: \"%s\"" % msg)
         
-        server_hash = socket.recv()
+        server_hash = socket.recv().decode()
         print("[.] Received digest, validating...")
         
         if hash == server_hash:
             print("[.] Hash test passed.")
         else:
-            print("[!] Hash test FAILED.")
+            print("[!] Hash test FAILED. (got %s, expected %s)" % (server_hash, hash))
             
 if __name__ == "__main__":
     main()
