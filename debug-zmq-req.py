@@ -1,6 +1,7 @@
 import zmq
 import hashlib
 import random
+import sys
 
 MSG_LENGTH = 16
 
