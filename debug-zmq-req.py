@@ -2,6 +2,7 @@ import zmq
 import hashlib
 import random
 import sys
+import time
 
 MSG_LENGTH = 16
 
@@ -16,9 +17,12 @@ def main():
     socket = context.socket(zmq.REQ)
     socket.connect(sys.argv[1])
     
+    print("[.] Waiting 5 seconds for bridge to start...")
+    time.sleep(5)
+    
     while True:
         msg = ''.join(random.choice("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") for _ in range(MSG_LENGTH))
-        hash = hashlib.sha256(msg).hexdigest()
+        hash = hashlib.sha256(msg.encode()).hexdigest()
         socket.send(msg.encode())
         print("[!] Sent new message: \"%s\"" % msg)
         
