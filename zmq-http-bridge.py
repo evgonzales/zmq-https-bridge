@@ -4,9 +4,13 @@ import threading
 import logging
 import requests
 import base64
+import sys
 
 # the address for our TCP sockets to bind to - typically loopback address
 BINDING_NAME = "127.0.0.1"
+
+# the address for our HTTP server to bind to 
+PUBLIC_BINDING_NAME = "0.0.0.0"
 
 # the ports to utilize for communication
 ZMQ_PORT = 9933
@@ -51,8 +55,8 @@ class BridgeRequestHandler(http.server.SimpleHTTPRequestHandler):
 class BridgeContext:
     def __init__(self):
         # initialize an HTTP server and use our BridgeRequestHandler to process
-        self.http_server = http.server.HTTPServer((BINDING_NAME, HTTP_PORT), BridgeRequestHandler)
-        logging.info("HTTP server created - the reciving bridge's destination should be set to: %s:%d" % (BINDING_NAME, HTTP_PORT))
+        self.http_server = http.server.HTTPServer((PUBLIC_BINDING_NAME, HTTP_PORT), BridgeRequestHandler)
+        logging.info("HTTP server created - the reciving bridge's destination should be set to: %s:%d" % (PUBLIC_BINDING_NAME, HTTP_PORT))
         
         # setup ZMQ context
         self.zmq_context = zmq.Context()
