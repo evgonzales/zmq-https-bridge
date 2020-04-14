@@ -52,7 +52,7 @@ class BridgeContext:
     def __init__(self):
         # initialize an HTTP server and use our BridgeRequestHandler to process
         self.http_server = http.server.HTTPServer((BINDING_NAME, HTTP_PORT), BridgeRequestHandler)
-        logging.info("HTTP server, binded to %s:%d" % (BINDING_NAME, HTTP_PORT))
+        logging.info("HTTP server created - the reciving bridge's destination should be set to: %s:%d" % (BINDING_NAME, HTTP_PORT))
         
         # setup ZMQ context
         self.zmq_context = zmq.Context()
@@ -60,16 +60,16 @@ class BridgeContext:
         self.zmq_socket = self.zmq_context.socket(zmq.PAIR)
         # bind to loopback (or whatever we need to bind to; should be 127.0.0.1 to prevent leakage)
         self.zmq_socket.bind("tcp://%s:%d" % (BINDING_NAME, ZMQ_PORT))
-        logging.info("ZMQ recv socket, binded to %s:%d" % (BINDING_NAME, ZMQ_PORT))
+        logging.info("ZMQ socket created - your ZMQ application should connect to: %s:%d" % (BINDING_NAME, ZMQ_PORT))
         
         self.running = True
     
     def tick_zmq_socket(self):
         # core function for the ZMQ listening thread
-        logging.info("beginning ZMQ socket ticking")
+        logging.info("[ZMQ] ZMQ socket thread started")
         while self.is_running():
             recv_zmq_data = self.zmq_socket.recv()
-            logging.info("received new message - forwarding")
+            logging.info("[ZMQ] Received data from ZMQ application")
             
             # encode data into b64, prevents possibly bad HTTP server from interpreting as ASCII rather than bytes
             encoded = base64.b64encode(recv_zmq_data)
@@ -78,16 +78,16 @@ class BridgeContext:
             # since we might move to twisted, we can replace this later
             requests.post(DESTINATION, data=encoded)
             
-            logging.info("forwraded %d bytes to http server" % len(encoded))
+            logging.info("[ZMQ] POST'd %d bytes to destination" % len(encoded))
     
     def tick_http_server(self):
         # core function for the HTTP listening thread
-        logging.info("beginning HTTP server ticking")
+        logging.info("[HTTP] HTTP server thread started")
         while self.is_running():
             self.http_server.handle_request()
-            logging.info("received http request - processed")
+            logging.info("[HTTP] Successfully handled HTTP request")
             self.zmq_socket.send(self.zmq_data)
-            logging.info("forwarded %d bytes to zmq app " % len(self.zmq_data))
+            logging.info("[HTTP] Sent %d bytes to ZMQ application" % len(self.zmq_data))
             
     def get_zmq_socket(self):
         return self.zmq_socket
@@ -105,7 +105,6 @@ def main():
     setup_logging_levels()
     
     if len(sys.argv) >= 4:
-        
         # got CLI settings; parse them
         # and re-set the global values, kinda bad? should move to constructor-based
         global ZMQ_PORT
@@ -114,7 +113,7 @@ def main():
         ZMQ_PORT = int(sys.argv[1])
         HTTP_PORT = int(sys.argv[2])
         DESTINATION = sys.argv[3]
-        logging.info("using cli settings: ZMQ_PORT=%d, HTTP_PORT=%d, DESTINATION=%s" % (ZMQ_PORT, HTTP_PORT, DESTINATION))
+        logging.info("Using provided CLI settings: ZMQ_PORT=%d, HTTP_PORT=%d, DESTINATION=%s" % (ZMQ_PORT, HTTP_PORT, DESTINATION))
     
     # set our global bridge context - should also be constructor based
     global BRIDGE_CONTEXT
