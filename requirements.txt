@@ -1,0 +1,3 @@
+Twisted~=20.3.0
+txZMQ~=0.8.2
+pyzmq~=19.0.0

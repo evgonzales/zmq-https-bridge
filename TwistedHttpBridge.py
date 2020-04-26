@@ -1,39 +1,21 @@
 import base64
-import logging
 import hashlib
+import logging
 
 from twisted.internet import reactor, endpoints, ssl
-from twisted.web.resource import Resource, ForbiddenResource
+from twisted.web.resource import Resource
 from twisted.web.server import Site
 
-import BridgeApplication
 from BaseServerBridge import BaseBridge
-import os
-
 
 LOG = logging.getLogger("Twist-HTTP")
-
-
-class ReadyPage(Resource):
-    isLeaf = True
-
-    def __init__(self, bridge):
-        Resource.__init__(self)
-        self._bridge = bridge
-
-    def render_GET(self, request):
-        return ForbiddenResource()
-
-    def render_POST(self, request):
-        BridgeApplication.READY = True
-        return 'OK'
 
 
 def fail(request, code, msg):
     request.setResponseCode(code)
     client_addr = request.getClientAddress()
-    LOG.info("Failed to process request from %s:%d: code=%d, msg=%s"
-             % (client_addr.host, client_addr.port, code, msg))
+    LOG.debug("Failed to process request from %s:%d: code=%d, msg=%s"
+              % (client_addr.host, client_addr.port, code, msg))
     return msg
 
 
@@ -45,6 +27,7 @@ class ZMQDataPage(Resource):
         self._bridge = bridge
 
     def render(self, request):
+        LOG.info("Handling new request...")
         if request.method != b'POST':
             return fail(request, 405, "Bad request method")
 
@@ -60,17 +43,19 @@ class ZMQDataPage(Resource):
         # read the base64 encoded data
         b64_data = request.content.read(content_length)
         LOG.info("Received new request of %d bytes..." % len(b64_data))
+        LOG.debug("b64_data=%s" % b64_data)
         # decode our data
         zmq_data = base64.b64decode(b64_data)
         # now check for validity; if we're invalid, don't forward it.
         digest = hashlib.sha256(zmq_data).hexdigest()
-        if digest != request.getHeader("X-Verify-Hash"):
-            return fail(request, 500, "Hash check failed.")
+        remote_digest = request.getHeader("X-Verify-Hash")
+        if digest != remote_digest:
+            return fail(request, 500, "Hash check failed (%s != %s)" % (digest[0:8], remote_digest[0:8]))
 
         # then forward it onto the ZMQ app
         self._bridge.zmq_bridge.transfer_data_to_app(zmq_data)
         LOG.info("Forwarded %d bytes..." % len(zmq_data))
-        return 'OK'
+        return b'OK'
 
 
 class BridgePage(Resource):
@@ -85,19 +70,14 @@ class Bridge(BaseBridge):
         self.zmq_bridge = zmq_bridge
         self._twisted_root = BridgePage()
         self._twisted_root.putChild(b'zmq', ZMQDataPage(self))
-        self._twisted_root.putChild(b'ready', ReadyPage(self))
 
         self._twisted_server = Site(self._twisted_root)
 
-        local_path = os.path.abspath(__file__)
         ssl_context = ssl.DefaultOpenSSLContextFactory(
-            os.path.join(local_path, 'privkey.pem'),
-            os.path.join(local_path, 'cacert.pem'),
+            'bridge-ssl.key',
+            'bridge-ssl.pem'
         )
 
         self._twisted_endpoint = endpoints.SSL4ServerEndpoint(reactor, bind_port, ssl_context, interface=bind_address)
-        LOG.info("Created Twisted endpoint on %s:%d" % (bind_address, bind_port))
-
-    def tick_server(self):
-        LOG.info("Starting Twisted server...")
-        self._twisted_endpoint.listenSSL(self._twisted_server)
+        self._twisted_endpoint.listen(self._twisted_server)
+        LOG.info("Created HTTPS endpoint on %s:%d" % (bind_address, bind_port))

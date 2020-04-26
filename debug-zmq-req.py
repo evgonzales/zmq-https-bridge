@@ -33,9 +33,9 @@ def main():
         print("[.] Received digest, validating...")
 
         if hash == server_hash:
-            print("[.] Hash test passed.")
+            print("[+] Hash test passed.")
         else:
-            print("[!] Hash test FAILED. (got %s, expected %s)" % (server_hash, hash))
+            raise ValueError("Hash test FAILED. (got %s, expected %s)" % (server_hash, hash))
 
     end = time.now()
     delta = end - start
