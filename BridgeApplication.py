@@ -54,28 +54,8 @@ def main():
     zmq_bridge = ZMQBridge.Bridge(zmq_addr, zmq_port, destination, binding)
     TwistedHttpBridge.Bridge(zmq_bridge, http_bind_addr, http_bind_port)
 
-    # create two threads; could be improved on by using Twisted's reactor-based stuff
-    # zmq_thread = threading.Thread(target=zmq_bridge.tick_server, args=(), daemon=True)
-    # http_thread = threading.Thread(target=http_bridge.tick_server, args=(), daemon=True)
-
-    # start up the two new threads
-    # zmq_thread.start()
-    # http_thread.start()
-
-    # wait for ZMQ and HTTP server to get ready
-    # time.sleep(1)
-
-    # run Twisted - this blocks until Twisted ends
+    # start Twisted; with txZMQ, ZeroMQ is also managed by Twisted
     reactor.run()
-
-    # wait until each thread dies at this point
-    # try:
-    #     while zmq_thread.is_alive() and http_thread.is_alive():
-    #         zmq_thread.join(1)
-    #         http_thread.join(1)
-    # except KeyboardInterrupt:
-    #     LOG.info("Received KeyboardInterrupt - terminating.")
-    #     exit(0)
 
 
 def split_addr_port(input_combo: str) -> (str, int):

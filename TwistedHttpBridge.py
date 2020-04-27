@@ -8,6 +8,7 @@ from twisted.web.server import Site
 
 from BaseServerBridge import BaseBridge
 
+
 LOG = logging.getLogger("Twist-HTTP")
 
 
@@ -60,6 +61,7 @@ class ZMQDataPage(Resource):
 
 class BridgePage(Resource):
     def render(self, request):
+        # always fail; applications need to post onto /zmq
         return fail(request, 400, "No action specified.")
 
 
@@ -73,11 +75,13 @@ class Bridge(BaseBridge):
 
         self._twisted_server = Site(self._twisted_root)
 
+        # load the key and certificate for SSL
         ssl_context = ssl.DefaultOpenSSLContextFactory(
             'bridge-ssl.key',
             'bridge-ssl.pem'
         )
 
+        # create the SSL endpoint and begin listening
         self._twisted_endpoint = endpoints.SSL4ServerEndpoint(reactor, bind_port, ssl_context, interface=bind_address)
         self._twisted_endpoint.listen(self._twisted_server)
         LOG.info("Created HTTPS endpoint on %s:%d" % (bind_address, bind_port))
