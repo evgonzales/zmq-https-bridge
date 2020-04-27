@@ -1,3 +1,6 @@
 __pycache__/
 .idea
 .env
+
+bridge-ssl.key
+bridge-ssl.pem
