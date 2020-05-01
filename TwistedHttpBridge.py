@@ -15,7 +15,7 @@ LOG = logging.getLogger("Twist-HTTP")
 def fail(request, code, msg):
     request.setResponseCode(code)
     client_addr = request.getClientAddress()
-    LOG.debug("Failed to process request from %s:%d: code=%d, msg=%s"
+    LOG.error("Failed to process request from %s:%d: code=%d, msg=%s"
               % (client_addr.host, client_addr.port, code, msg))
     return msg
 
@@ -28,7 +28,7 @@ class ZMQDataPage(Resource):
         self._bridge = bridge
 
     def render(self, request):
-        LOG.info("Handling new request...")
+        LOG.debug("Handling new request...")
         if request.method != b'POST':
             return fail(request, 405, "Bad request method")
 

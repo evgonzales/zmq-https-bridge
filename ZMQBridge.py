@@ -55,7 +55,7 @@ class Bridge(BaseBridge):
         # store the socket identity of the client; we need it to send data back to the local ZMQ app
         self._zmq_socket_identity = None
 
-        LOG.info("Initializing socket and agent")
+        LOG.debug("Initializing socket and agent")
         # check if we want to use an HTTPS proxy; useful for Fiddler
         if USE_HTTPS_PROXY:
             self._twisted_agent = ProxyAgent(HostnameEndpoint(reactor, PROXY_HOST, PROXY_PORT), reactor)
@@ -69,7 +69,7 @@ class Bridge(BaseBridge):
         def post_data(*zmq_data_recv):
             self._zmq_socket_identity = zmq_data_recv[0]
             data = zmq_data_recv[-1]
-            LOG.info("Received %d bytes of data" % len(data))
+            LOG.debug("Received %d bytes of data" % len(data))
             # hash and base64 our data for validation and transportation
             data_hash = hashlib.sha256(data).hexdigest()
             b64_data = base64.b64encode(data)
@@ -90,7 +90,7 @@ class Bridge(BaseBridge):
                     LOG.error("%s", str(error))
 
             request.addErrback(handle_twisted_error)
-            request.addCallback(lambda ignored: LOG.info("Request completed."))
+            request.addCallback(lambda ignored: LOG.debug("Request completed."))
             LOG.info("Forwarded data to destination (hash preview: %s)" % data_hash[0:8])
 
         self._zmq_socket.gotMessage = post_data
@@ -104,7 +104,6 @@ class Bridge(BaseBridge):
         else:
             # otherwise, we need to send the socket identity, empty frame, and then our data
             self._zmq_socket.socket.send_multipart([self._zmq_socket_identity, b'', data])
-        LOG.info("Sent.")
 
 
 @implementer(IBodyProducer)
