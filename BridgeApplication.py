@@ -1,17 +1,20 @@
 import logging
 from optparse import OptionParser
-
 from twisted.internet import reactor
 
+import multiprocessing_logging
 import TwistedHttpBridge
 import ZMQBridge
 import BridgeInjector
 
-LOG = logging.getLogger("BridgeMain")
+logging.basicConfig(filename="zmq-https-bridge.log", filemode="a",
+                    level=logging.INFO, format="%(name)-12s @ %(asctime)s: [%(levelname)-8s] %(message)s",
+                    datefmt='%m/%d/%Y %I:%M:%S %p')
+multiprocessing_logging.install_mp_handler()
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG, format="%(name)-12s: [%(levelname)-8s] %(message)s")
+    LOG = logging.getLogger("BridgeMain")
 
     usage = "usage: %s <zmq bind address> <http bind address> <destination> [is-app-hosting]"
     parser = OptionParser(usage=usage)
@@ -69,6 +72,7 @@ def main():
 
 
 def start_bridge(zmq_addr, zmq_port, http_bind_addr, http_bind_port, destination, binding):
+    logging.getLogger("BridgeMain").info("Starting bridge...")
     # create our bridges
     zmq_bridge = ZMQBridge.Bridge(zmq_addr, zmq_port, destination, binding)
     TwistedHttpBridge.Bridge(zmq_bridge, http_bind_addr, http_bind_port)

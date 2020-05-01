@@ -4,6 +4,7 @@ import BridgeApplication
 import multiprocessing
 import shutil
 import threading
+import time
 
 from txzmq import ZmqEndpointType
 
@@ -44,7 +45,8 @@ def inject(scan_dir, zmq_addr: str, zmq_port: int, http_addr: str, http_port: in
                     line = file_stream.readline()
 
         for target, (offset, reinject) in to_inject.items():
-            shutil.copyfile(target, target + ".noninjected")
+            if not reinject:
+                shutil.copyfile(target, target + ".noninjected")
             with open(target, "r+") as file_stream:
                 file_stream.seek(offset)
                 if reinject:
@@ -94,25 +96,27 @@ def inject_zeromq_bridge(zmq_addr: str, zmq_port: int, http_bind_addr: str, http
     def _start_bridge(is_app_hosting):
         global STARTED_BRIDGE
         if not STARTED_BRIDGE:
-            bp = threading.Thread(target=BridgeApplication.start_bridge, daemon=True,
-                                  args=(zmq_addr, zmq_port, http_bind_addr, http_bind_port, destination,
-                                        is_app_hosting))
+            bp = multiprocessing.Process(target=BridgeApplication.start_bridge, daemon=True,
+                                         args=(zmq_addr, zmq_port, http_bind_addr, http_bind_port, destination,
+                                               is_app_hosting))
             bp.start()
-            print("Started bridge process")
+            # give the bridge a second to start up fully
+            time.sleep(1)
+            LOG.debug("Started bridge process")
             STARTED_BRIDGE = True
 
     # first, we need to override ZMQ's socket bind/connect to redirect it to our socket
     def _injected_bind(self, addr):
-        print("Trapped bind(%s)" % addr)
+        LOG.debug("Trapped bind(%s)" % addr)
         self.__real_bind__(addr)
         _start_bridge(True)
 
     def _injected_connect(self, addr):
-        print("Trapped connect(%s)" % addr)
+        LOG.debug("Trapped connect(%s)" % addr)
         _start_bridge(False)
         new_dst = "tcp://%s:%d" % (zmq_addr, zmq_port)
         self.__real_connect__(new_dst)
-        print("Redirected connect() call to %s" % new_dst)
+        LOG.debug("Redirected connect() call to %s" % new_dst)
 
     # then we need to fix txzmq's socket to use the real underlying method so we don't end up looping
     def _injected_connectOrBind(self, endpoints):
